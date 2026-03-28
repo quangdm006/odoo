@@ -1,0 +1,66 @@
+name: CI/CD Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: self-hosted  # Runner chạy trực tiếp trên VPS
+
+    steps:
+      # ─── 1. Checkout code ───────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ─── 2. Xác định phần nào thay đổi ─────────────────────────────
+      - name: Detect changed paths
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            app:
+              - 'backup.dhthainguyen.edu.vn/**'
+            infra:
+              - 'compose.yaml'
+              - 'wordpress/**'
+              - 'mysql/**'
+
+      # ─── 3. Build Docker image (chỉ khi app thay đổi) ───────────────
+      - name: Build Docker image
+        if: steps.changes.outputs.app == 'true'
+        run: |
+          docker build \
+            -t headless_wrapper-app.devlab.info.vn:latest \
+            ./backup.dhthainguyen.edu.vn
+
+      # ─── 4. Tạo/cập nhật file .env ──────────────────────────────────
+      - name: Write .env file
+        run: |
+          cat > .env <<EOF
+          WORDPRESS_DB_HOST=${{ secrets.WORDPRESS_DB_HOST }}
+          WORDPRESS_DB_NAME=${{ secrets.WORDPRESS_DB_NAME }}
+          WORDPRESS_DB_USER=${{ secrets.WORDPRESS_DB_USER }}
+          WORDPRESS_DB_PASSWORD=${{ secrets.WORDPRESS_DB_PASSWORD }}
+          DB_HOST=${{ secrets.DB_HOST }}
+          DB_NAME=${{ secrets.DB_NAME }}
+          DB_USER=${{ secrets.DB_USER }}
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}
+          MYSQL_DATABASE=${{ secrets.MYSQL_DATABASE }}
+          EOF
+
+      # ─── 5. Pull base images nếu infra thay đổi ─────────────────────
+      - name: Pull base images
+        if: steps.changes.outputs.infra == 'true'
+        run: docker compose pull wp.devlab.info.vn mysql
+
+      # ─── 6. Deploy ──────────────────────────────────────────────────
+      - name: Docker Compose up
+        run: docker compose up -d --remove-orphans
+
+      # ─── 7. Dọn dẹp image cũ ────────────────────────────────────────
+      - name: Prune old images
+        run: docker image prune -f
