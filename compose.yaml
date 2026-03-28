@@ -40,6 +40,7 @@ services:
 
   mysql:
     image: mysql:5.6
+    container_name: mysql.devlab.info.vn
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
@@ -56,10 +57,51 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
-# cau hinh 2 loai mang: public va private
+
+  odoo:
+    image: odoo:17.0
+    container_name: odoo.devlab.info.vn
+    environment:
+      HOST: postgres.devlab.info.vn
+      USER: ${ODOO_DB_USER}
+      PASSWORD: ${ODOO_DB_PASSWORD}
+    volumes:
+      - odoo_data:/var/lib/odoo
+      - ./odoo/config:/etc/odoo
+      - ./odoo/addons:/mnt/extra-addons
+    ports:
+      - "8069:8069"
+    networks:
+      - backup.dhthainguyen.edu.vn
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15
+    container_name: postgres.devlab.info.vn
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: ${ODOO_DB_USER}
+      POSTGRES_PASSWORD: ${ODOO_DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backup.dhthainguyen.edu.vn
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${ODOO_DB_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
 networks:
   backup.dhthainguyen.edu.vn:
     driver: bridge
+
 volumes:
   wordpress_data:
   mysql_data:
+  odoo_data:
+  postgres_data:
