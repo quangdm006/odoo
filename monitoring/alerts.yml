@@ -1,0 +1,58 @@
+groups:
+  - name: container_alerts
+    rules:
+      - alert: ContainerDown
+        expr: absent(container_last_seen{name=~"wp.devlab.info.vn|app.devlab.info.vn|odoo.devlab.info.vn|mysql.devlab.info.vn|postgres.devlab.info.vn"})
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Container down"
+          description: "Container khong phan hoi hon 1 phut"
+
+      - alert: ContainerHighCPU
+        expr: rate(container_cpu_usage_seconds_total{name!=""}[5m]) * 100 > 80
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container CPU cao"
+          description: "CPU cao qua nguong 80%"
+
+      - alert: ContainerHighMemory
+        expr: (container_memory_usage_bytes{name!=""} / container_spec_memory_limit_bytes{name!=""}) * 100 > 80 and container_spec_memory_limit_bytes{name!=""} > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container RAM cao"
+          description: "RAM cao qua nguong 80%"
+
+  - name: host_alerts
+    rules:
+      - alert: HostDiskUsageHigh
+        expr: (node_filesystem_size_bytes{mountpoint="/"} - node_filesystem_free_bytes{mountpoint="/"}) / node_filesystem_size_bytes{mountpoint="/"} * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk sap day"
+          description: "Disk dang dung qua 85%"
+
+      - alert: HostHighMemory
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "RAM may chu gan day"
+          description: "RAM dang dung qua 90%"
+
+      - alert: HostHighCPU
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CPU may chu cao"
+          description: "CPU dang o qua 85%"

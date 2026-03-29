@@ -1,8 +1,9 @@
+name: odoo
+
 services:
   wp.devlab.info.vn:
     container_name: wp.devlab.info.vn
     image: wordpress:6.5.4
-    user: "1000:1000"
     environment:
       WORDPRESS_DB_HOST: ${WORDPRESS_DB_HOST}
       WORDPRESS_DB_NAME: ${WORDPRESS_DB_NAME}
@@ -21,7 +22,7 @@ services:
     restart: unless-stopped
 
   app.devlab.info.vn:
-    image: headless_wrapper-app.devlab.info.vn:latest
+    build: ./backup.dhthainguyen.edu.vn
     container_name: app.devlab.info.vn
     user: "1000:1000"
     environment:
@@ -76,6 +77,11 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8069/web/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
     restart: unless-stopped
 
   postgres:
