@@ -1,0 +1,27 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: self-hosted  # chạy trực tiếp trên server testuat
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Pull code mới nhất
+        run: |
+          cd /opt/aum_web/training/26_03_27/odoo
+          git pull origin main
+
+      - name: Deploy
+        run: |
+          cd /opt/aum_web/training/26_03_27/odoo
+          docker compose -f compose.yml up -d --build
+
+      - name: Kiểm tra trạng thái
+        run: docker ps
