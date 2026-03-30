@@ -1,4 +1,4 @@
-name: odoo
+name: odoo #tên dịch vụ
 
 services:
   wp.devlab.info.vn:
